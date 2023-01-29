@@ -6,6 +6,11 @@ export interface Env {
 	MONGODB_CLUSTER_NAME: string;
 	MONGODB_DATABASE: string;
 	MONGODB_COLLECTION: string;
+	API_ENDPOINT: string;
+}
+
+type RequestBody = {
+	[key:string]: string
 }
 
 let App: Realm.App;
@@ -27,14 +32,15 @@ export const worker = {
 		}
 
         const path = url.pathname.replace(/[/]$/, '');
-		if (path !== '/api/ping') {
+		if (path !== env.API_ENDPOINT) {
             return outputNothing();
         }
 
 		const formData = await request.formData();
-        const requestBody:any = {};
+        const requestBody:RequestBody = {};
         for (const entry of formData.entries()) {
-			requestBody[entry[0]] = entry[1];
+			const key = entry[0] as string
+			requestBody[key] = entry[1] as string;
         }
 
 		const credentials = Realm.Credentials.apiKey(env.REALM_API_KEY);
