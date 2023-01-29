@@ -1,36 +1,64 @@
-/**
- * Welcome to Cloudflare Workers! This is your first worker.
- *
- * - Run `npx wrangler dev src/index.ts` in your terminal to start a development server
- * - Open a browser tab at http://localhost:8787/ to see your worker in action
- * - Run `npx wrangler publish src/index.ts --name my-worker` to publish your worker
- *
- * Learn more at https://developers.cloudflare.com/workers/
- */
-
-// These initial Types are based on bindings that don't exist in the project yet,
-// you can follow the links to learn how to implement them.
+import * as Realm from 'realm-web';
 
 export interface Env {
-	// Example binding to KV. Learn more at https://developers.cloudflare.com/workers/runtime-apis/kv/
-	// MY_KV_NAMESPACE: KVNamespace
-	//
-	// Example binding to Durable Object. Learn more at https://developers.cloudflare.com/workers/runtime-apis/durable-objects/
-	// MY_DURABLE_OBJECT: DurableObjectNamespace
-	//
-	// Example binding to R2. Learn more at https://developers.cloudflare.com/workers/runtime-apis/r2/
-	// MY_BUCKET: R2Bucket
+	REALM_APPID: string;
+    REALM_API_KEY: string;
+	MONGODB_CLUSTER_NAME: string;
+	MONGODB_DATABASE: string;
+	MONGODB_COLLECTION: string;
 }
+
+// Define type alias; available via `realm-web`
+type Document = globalThis.Realm.Services.MongoDB.Document;
+
+// Declare the interface for a "todos" document
+interface Purchases extends Document {
+    owner: string;
+    done: boolean;
+    todo: string;
+}
+
+let App: Realm.App;
+
+const outputNothing = () => new Response(`Nothing here...`);
 
 export const worker = {
 	async fetch(
 		request: Request,
-		env: Env,
-		ctx: ExecutionContext
+		env: Env
 	): Promise<Response> {
 
+		const url = new URL(request.url);
+        App = App || new Realm.App(env.REALM_APPID);
+
+		const method = request.method;
+		if (method === 'GET') {
+			return outputNothing();
+		}
+
+        const path = url.pathname.replace(/[/]$/, '');
+		if (path !== '/api/ping') {
+            return outputNothing();
+        }
+
+		const formData = await request.formData();
+        const requestBody:any = {};
+        for (const entry of formData.entries()) {
+			requestBody[entry[0]] = entry[1];
+        }
+
+		const credentials = Realm.Credentials.apiKey(env.REALM_API_KEY);
+		// Attempt to authenticate
+		const user = await App.logIn(credentials);
+		const client = user.mongoClient(env.MONGODB_CLUSTER_NAME);
 		
-		return new Response(`Hello World from ${request.method}!`);
+		const collection = client.db(env.MONGODB_DATABASE).collection<Purchases>(env.MONGODB_COLLECTION);
+		
+		await collection.insertOne({
+			...requestBody
+		})
+
+		return outputNothing();
 	},
 };
 
