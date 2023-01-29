@@ -8,16 +8,6 @@ export interface Env {
 	MONGODB_COLLECTION: string;
 }
 
-// Define type alias; available via `realm-web`
-type Document = globalThis.Realm.Services.MongoDB.Document;
-
-// Declare the interface for a "todos" document
-interface Purchases extends Document {
-    owner: string;
-    done: boolean;
-    todo: string;
-}
-
 let App: Realm.App;
 
 const outputNothing = () => new Response(`Nothing here...`);
@@ -52,7 +42,7 @@ export const worker = {
 		const user = await App.logIn(credentials);
 		const client = user.mongoClient(env.MONGODB_CLUSTER_NAME);
 		
-		const collection = client.db(env.MONGODB_DATABASE).collection<Purchases>(env.MONGODB_COLLECTION);
+		const collection = client.db(env.MONGODB_DATABASE).collection(env.MONGODB_COLLECTION);
 		
 		await collection.insertOne({
 			...requestBody
