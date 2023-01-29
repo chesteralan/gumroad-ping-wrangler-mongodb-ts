@@ -1,0 +1,3 @@
+main = "./src/index.ts"
+name = "pinas-gumroad-ping"
+compatibility_date = "2022-07-26"
